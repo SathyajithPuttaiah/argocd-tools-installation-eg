@@ -122,6 +122,7 @@ kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch
 ```
 
    - If you do want to use StatsD, follow these steps:
+        
         a. Download the DaemonSet YAML to your kubectl client host by running the following command.
         ```
         curl -O  https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cwagent/cwagent-daemonset.yaml
