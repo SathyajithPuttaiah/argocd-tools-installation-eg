@@ -10,50 +10,54 @@ In the following steps, you set up Fluentd as a DaemonSet to send logs to CloudW
 | /aws/containerinsights/Cluster_Name/dataplane   |  The logs in /var/log/journal for kubelet.service, kubeproxy.service, and docker.service.   |
 
 ## Getting started with the installation of Fluentd in EKS
-
 ## Steps to be followed
 
+### Step 1: Create a namespace for CloudWatch
+Use the following step to create a Kubernetes namespace called amazon-cloudwatch for CloudWatch. You can skip this step if you have already created this namespace.
 
-RDK (Rule Development Kit) - https://github.com/awslabs/aws-config-rdk
+#### To create a namespace for CloudWatch
 
-RDKLib (Library to run rules at scale) - https://github.com/awslabs/aws-config-rdklib
-
-Config Rules Engine (Deploy and manage Rules at scale) - https://github.com/awslabs/aws-config-engine-for-compliance-as-code
-
-## Deploy one of the Config rules of this repo
-
-Whenever the rules are created with RDK, you can leverage the RDK tool to deploy the rule in your AWS account. You can spot those rules by the fact that 1) they have their own directory, and 2) there is a parameters.json file.
-
-### With the RDK
-In your working folder,
 ```
-git clone https://github.com/awslabs/aws-config-rules
-cd python
-rdk deploy NAME_OF_THE_RULE
+kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cloudwatch-namespace.yaml
 ```
 
-### Manually
-You can use the sample functions in this repository to create Config rules that evaluate the configuration settings of your AWS resources. First, you use AWS Lambda to create a function that is based on the sample code. Then, you use AWS Config to create a rule that is associated with the function. When the rule’s trigger occurs, AWS Config invokes your function to evaluate your AWS resources.
+### Step 2: Install Fluentd
 
-Add a rule to AWS Config by completing the following steps. For more detailed steps, see [Developing a Custom Rule for AWS Config](http://docs.aws.amazon.com/config/latest/developerguide/evaluate-config_develop-rules_nodejs.html) in the *AWS Config Developer Guide*.
+Start this process by downloading Fluentd. When you finish these steps, the deployment creates the following resources on the cluster:
 
-1. Navigate to the AWS Lambda Console.
-	- Sign in to the AWS Management Console and open the [AWS Lambda console](https://console.aws.amazon.com/lambda/).
-	- Verify that your region is set to one that supports AWS Config rules.
-	- For the list of supported regions, see [AWS Config Regions and Endpoints](http://docs.aws.amazon.com/general/latest/gr/rande.html#awsconfig_region).
-2. Create a Lambda function.
-	- Provide your code using the method required by the code entry type that you choose.  
-	- If you are adding a Python or Node.js function, you can copy and paste the code from the sample that you want to use. If you are adding a Java function, you must provide a JAR file that contains the Java classes. For instructions to build the JAR file, see [Creating an AWS Config Rule with Java](./java/HOWTO.md).
-	- For the role that you assign to your function, choose the **AWS Config Rules permission** option. This includes *AWSConfigRulesExecutionRole*, an AWS managed policy that allows your Lambda function permission to "put" evaluations.
-	- For **Handler**, if you are adding a Python or Node.js function, keep the default value. If you are adding a Java function, specify the handler value for to the Java function that you want to use. For the handler values, see [AWS Config Rules (Java)](./java/RULES_JAVA.md).
-3. After you create the function, take note of its ARN.  
-4. Open the [AWS Config console](https://console.aws.amazon.com/config/).   
-	- Verify that your region is set to the same region in which you created the AWS Lambda function for your custom rule.  
-5. Use the AWS Config console to add a custom rule.  
-	- For **AWS Lambda function ARN**, specify the ARN of the function that you created.
-	- For **Trigger type**, if you are using any of the *triggered samples* from this repository, choose **Configuration changes**. If you are using any of the *periodic* samples from this repository, choose **Periodic**.
-	- For the rule parameters, specify any required parameters.
-	- For the trigger types and required parameters for each function, see [AWS Config Rules](./RULES.md) (for Python and Node.js functions) or [AWS Config Rules (Java)](./java/RULES_JAVA.md).
-	- **Note**: When you create a custom rule with the AWS Config console, the appropriate permissions for invoking the Lambda are automatically created for you. If you create a custom rule with the AWS CLI, you need to give AWS Config permission to invoke your Lambda function, using the `aws lambda add-permission` command.
+- A service account named fluentd in the amazon-cloudwatch namespace. This service account is used to run the Fluentd DaemonSet.
+- A cluster role named fluentd in the amazon-cloudwatch namespace. This cluster role grants get, list, and watch permissions on pod logs to the fluentd service account.
+- A ConfigMap named fluentd-config in the amazon-cloudwatch namespace. This ConfigMap contains the configuration to be used by Fluentd.
 
-After you create the rule, it displays on the **Rules** page, and AWS Config invokes its Lambda function. A summary of the evaluation results appears after several minutes.
+#### To install Fluentd
+1. Create a ConfigMap named cluster-info with the cluster name and the AWS Region that the logs will be sent to. Run the following command, updating the placeholders with your cluster and Region names.
+```
+kubectl create configmap cluster-info \
+--from-literal=cluster.name=cluster_name \
+--from-literal=logs.region=region_name -n amazon-cloudwatch
+```
+
+2. Download and deploy the Fluentd DaemonSet to the cluster by running the following command.
+```
+kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/fluentd/fluentd.yaml
+```
+
+3. Validate the deployment by running the following command. Each node should have one pod named fluentd-cloudwatch-*.
+```
+kubectl get pods -n amazon-cloudwatch
+```
+
+### Step 3: Verify the Fluentd setup
+To verify your Fluentd setup, use the following steps.
+
+To verify the Fluentd setup for Container Insights
+1. Open the CloudWatch console at [console](https://console.aws.amazon.com/cloudwatch/)
+2. In the navigation pane, choose Log groups. Make sure that you're in the Region where you deployed Fluentd to your containers.
+
+In the list of log groups in the Region, you should see the following:
+
+/aws/containerinsights/Cluster_Name/application
+/aws/containerinsights/Cluster_Name/host
+/aws/containerinsights/Cluster_Name/dataplane
+
+If you see these log groups, the Fluentd setup is verified.
