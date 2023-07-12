@@ -16,11 +16,11 @@ In the following steps, you set up Fluentd as a DaemonSet to send logs to CloudW
 #### Clone the repo:
 ```
 git clone https://github.com/SathyajithPuttaiah/argocd-tools-installation-eg.git
+cd /argocd-tools-installation-eg/fluentd-installation/yaml_manifests
 ```
 
 1. Create a namespace for CloudWatch
 ```
-cd /argocd-tools-installation-eg/fluentd-installation/yaml_manifests
 kubectl apply -f cloudwatch-namespace.yaml
 ```
 ```

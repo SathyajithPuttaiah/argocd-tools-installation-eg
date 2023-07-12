@@ -5,13 +5,19 @@ In the following steps, you set up the CloudWatch agent to be able to collect me
 ## Getting started with the installation of CloudWatch agent in EKS
 ## Steps to be followed
 
+#### Clone the repo:
+```
+git clone https://github.com/SathyajithPuttaiah/argocd-tools-installation-eg.git
+cd /argocd-tools-installation-eg/fluentd-installation/yaml_manifests
+```
+
 ### Step 1: Create a namespace for CloudWatch
 Use the following step to create a Kubernetes namespace called amazon-cloudwatch for CloudWatch. You can skip this step if you have already created this namespace.
 
 #### To create a namespace for CloudWatch
 
 ```
-kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cloudwatch-namespace.yaml
+kubectl apply -f cloudwatch-namespace.yaml
 ```
 
 ### Step 2: Create a service account in the cluster
@@ -22,9 +28,9 @@ Use the following step to create a service account for the CloudWatch agent, if 
 
 - Enter the following command.
 ```
-kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cwagent/cwagent-serviceaccount.yaml
+kubectl apply -f cwagent-serviceaccount.yaml
 ```
-If you didn't follow the previous steps, but you already have a service account for the CloudWatch agent that you want to use, you must ensure that it has the following rules. Additionally, in the rest of the steps in the Container Insights installation, you must use the name of that service account instead of cloudwatch-agent.
+If you didn't follow the previous steps, but you already have a service account for the CloudWatch agent that you want to use, *you must ensure that it has the following rules*. Additionally, in the rest of the steps in the Container Insights installation, you must use the name of that service account instead of cloudwatch-agent.
 
 ```
 rules:
@@ -50,15 +56,10 @@ Use the following steps to create a ConfigMap for the CloudWatch agent.
 
 #### To create a ConfigMap for the CloudWatch agent
 
-1. Download the ConfigMap YAML to your kubectl client host by running the following command:
-```
-curl -O https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cwagent/cwagent-configmap.yaml
-```
-
-2. Edit the downloaded YAML file, as follows:\
+1. Edit the downloaded YAML file, as follows:\
 - *cluster_name* - In the kubernetes section, replace {{cluster-name}} with the name of your cluster. Remove the {{}} characters. Alternatively, if you're using an Amazon EKS cluster, you can delete the "cluster_name" field and value. If you do, the CloudWatch agent detects the cluster name from the Amazon EC2 tags.
 
-3. (Optional) Make further changes to the ConfigMap based on your monitoring requirements, as follows:
+2. (Optional) Make further changes to the ConfigMap based on your monitoring requirements, as follows:
 
 - *metrics_collection_interval* – In the kubernetes section, you can specify how often the agent collects metrics. The default is 60 seconds. The default cadvisor collection interval in kubelet is 15 seconds, so don't set this value to less than 15 seconds.
 
@@ -107,7 +108,7 @@ A full example of the JSON section is as follows.
 }
 ```
 
-4. Create the ConfigMap in the cluster by running the following command.
+3. Create the ConfigMap in the cluster by running the following command.
 ```
 kubectl apply -f cwagent-configmap.yaml
 ```
@@ -116,29 +117,24 @@ kubectl apply -f cwagent-configmap.yaml
 To finish the installation of the CloudWatch agent and begin collecting container metrics, use the following steps.
 
 #### To deploy the CloudWatch agent as a DaemonSet
-1. - If you do not want to use StatsD on the cluster, enter the following command.
+1. 
+- If you do not want to use StatsD on the cluster, enter the following command.
 ```
-kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cwagent/cwagent-daemonset.yaml
+kubectl apply -f cwagent-daemonset_NoStatsD.yaml
 ```
-
-   - If you do want to use StatsD, follow these steps:
-        
-        a. Download the DaemonSet YAML to your kubectl client host by running the following command.
-        ```
-        curl -O  https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cwagent/cwagent-daemonset.yaml
-        ```
-        b. Uncomment the port section in the cwagent-daemonset.yaml file as in the following:
-        ```
-        ports:
-            - containerPort: 8125
-                hostPort: 8125
-                protocol: UDP
-
-        ``` 
-        c. Deploy the CloudWatch agent in your cluster by running the following command.
-            ```
-            kubectl apply -f cwagent-daemonset.yaml
-            ```
+- If you do want to use StatsD, follow these steps:
+    
+    a. Uncomment the port section in the cwagent-daemonset_WithStatsD.yaml file as in the following:
+    ```
+    ports:
+      - containerPort: 8125
+          hostPort: 8125
+          protocol: UDP
+    ``` 
+    b. Deploy the CloudWatch agent in your cluster by running the following command.
+    ```
+    kubectl apply -f cwagent-daemonset_WithStatsD.yaml
+    ```
 
 2. Validate that the agent is deployed by running the following command.
 ```
