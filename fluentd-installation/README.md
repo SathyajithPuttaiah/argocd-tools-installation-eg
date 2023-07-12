@@ -13,41 +13,47 @@ In the following steps, you set up Fluentd as a DaemonSet to send logs to CloudW
 
 # Steps to execute:
 
+#### Clone the repo:
+```
+git clone https://github.com/SathyajithPuttaiah/argocd-tools-installation-eg.git
+```
+
 1. Create a namespace for CloudWatch
 ```
-kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cloudwatch-namespace.yaml
+cd /argocd-tools-installation-eg/fluentd-installation/yaml_manifests
+kubectl apply -f cloudwatch-namespace.yaml
 ```
 ```
-[ec2-user@ip-172-31-0-85 ~]$ kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/cloudwatch-namespace.yaml
+[ec2-user@ip ~]$ kubectl apply -f cloudwatch-namespace.yaml
 namespace/amazon-cloudwatch configured
 ```
 2. Install Fluentd
 
 #### To install Fluentd
 
-    1. reate a ConfigMap named cluster-info with the cluster name and the AWS Region that the logs will be sent to
-    ```
-    kubectl create configmap cluster-info \
-    --from-literal=cluster.name=cluster_name \
-    --from-literal=logs.region=region_name -n amazon-cloudwatch
-    ```
+1. Create a ConfigMap named cluster-info with the cluster name and the AWS Region that the logs will be sent to
+```
+kubectl create configmap cluster-info \
+--from-literal=cluster.name=<cluster_name> \
+--from-literal=logs.region=<region_name> -n amazon-cloudwatch
+```
 
-    2. Download and deploy the Fluentd DaemonSet to the cluster by running the following command
+2. Deploy the Fluentd DaemonSet to the cluster by running the following command
 
-    *Note* : Changes to be done for fluentd.yaml:
+*Note : Changes to be done for fluentd.yaml:*
 
-    - Change the parse type from json to cri (container runtime interface)
-    - update the fluentd image with latest one : fluent/fluentd-kubernetes-daemonset:v1.16.1-debian-cloudwatch-1.2
+- Change the parse type from json to cri (container runtime interface)
+- update the fluentd image with latest one : fluent/fluentd-kubernetes-daemonset:v1.16.1-debian-cloudwatch-1.2
 
-    And then apply the yaml:
-    ```
-    [ec2-user@ip-172-31-0-85 fluentd]$ kubectl apply -f fluentd.yaml -n amazon-cloudwatch
-    serviceaccount/fluentd configured
-    clusterrole.rbac.authorization.k8s.io/fluentd-role configured
-    clusterrolebinding.rbac.authorization.k8s.io/fluentd-role-binding configured
-    configmap/fluentd-config configured
-    daemonset.apps/fluentd-cloudwatch configured
-    ```
+And then apply the yaml:
+```
+[ec2-user@ip- fluentd]$ kubectl apply -f fluentd.yaml -n amazon-cloudwatch
+serviceaccount/fluentd configured
+clusterrole.rbac.authorization.k8s.io/fluentd-role configured
+clusterrolebinding.rbac.authorization.k8s.io/fluentd-role-binding configured
+configmap/fluentd-config configured
+daemonset.apps/fluentd-cloudwatch configured
+```
 
 3. Validate the deployment by running the following command. Each node should have one pod named fluentd-cloudwatch-*
 ```
